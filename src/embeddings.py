@@ -73,6 +73,19 @@ class EmbeddingExtractor:
                     return layer
             except AttributeError:
                 continue
+
+        # Fallback: scan all named modules and pick the nn.Embedding with the
+        # most rows — that will be the token embedding table for any architecture.
+        all_embeddings = [
+            (name, mod)
+            for name, mod in model.named_modules()
+            if isinstance(mod, torch.nn.Embedding)
+        ]
+        if all_embeddings:
+            name, layer = max(all_embeddings, key=lambda x: x[1].weight.shape[0])
+            print(f"  Embedding layer found via scan: {name} {tuple(layer.weight.shape)}")
+            return layer
+
         raise RuntimeError(
             "Could not locate the token embedding layer automatically.\n"
             "Please open src/embeddings.py and add the attribute path for "
