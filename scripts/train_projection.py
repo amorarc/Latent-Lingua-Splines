@@ -144,6 +144,7 @@ def main():
         umap_min_dist=umap_cfg.get("min_dist", 0.1),
         umap_metric=umap_cfg.get("metric", "cosine"),
         umap_random_state=umap_cfg.get("random_state", 42),
+        umap_n_jobs=umap_cfg.get("n_jobs", 1),
     )
     coords = projection.fit_transform(vecs)   # (n_tokens, 3)
 

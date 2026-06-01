@@ -23,6 +23,7 @@ class LatentProjection:
         umap_min_dist: float = 0.1,
         umap_metric: str = "cosine",
         umap_random_state: int = 42,
+        umap_n_jobs: int = 1,
     ):
         self.pca = PCA(n_components=pca_components)
         self.umap = UMAP(
@@ -31,6 +32,7 @@ class LatentProjection:
             min_dist=umap_min_dist,
             metric=umap_metric,
             random_state=umap_random_state,
+            n_jobs=umap_n_jobs,
         )
         self._fitted = False
 
