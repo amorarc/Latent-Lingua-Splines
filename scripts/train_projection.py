@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """
-Train the PCA → UMAP projection on a corpus and save phrase trajectories.
+Fit a PCA → UMAP projection on the model's full vocabulary embeddings and
+plot every token as a point in 3-D space, coloured by azimuthal angle.
 
 Usage:
     python scripts/train_projection.py
@@ -13,113 +14,88 @@ import re
 import sys
 from pathlib import Path
 
-# Make sure src/ is importable when running as a script
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import numpy as np
 import matplotlib.pyplot as plt
-import matplotlib.cm as cm
-from tqdm import tqdm
+from matplotlib.cm import ScalarMappable
+from matplotlib.colors import Normalize
 
-from src import EmbeddingExtractor, LatentProjection, load_config, load_corpus
+from src import EmbeddingExtractor, LatentProjection, load_config
 
-
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
 
 _LATIN_OR_DIGIT = re.compile(r"[a-zA-Z0-9]")
 
 
-def _build_corpus_embeddings(
-    extractor: EmbeddingExtractor,
-    phrases: list[str],
-) -> tuple[np.ndarray, list[str]]:
-    """Collect token embeddings, keeping only tokens that contain at least one
-    Latin letter (a-z / A-Z) or digit.  Pure punctuation, whitespace, and
-    non-Latin script tokens are discarded before projection training."""
-    print("Extracting embeddings from corpus …")
-    all_vecs, all_tokens = extractor.corpus_embeddings(phrases)
+# ---------------------------------------------------------------------------
+# Vocab extraction + filter
+# ---------------------------------------------------------------------------
 
-    mask = [bool(_LATIN_OR_DIGIT.search(t)) for t in all_tokens]
-    filtered_vecs   = all_vecs[[i for i, keep in enumerate(mask) if keep]]
-    filtered_tokens = [t for t, keep in zip(all_tokens, mask) if keep]
+def _vocab_embeddings(
+    extractor: EmbeddingExtractor,
+) -> tuple[np.ndarray, list[str]]:
+    """
+    Return embeddings and token strings for every vocab entry that contains
+    at least one Latin letter or digit.  Pure punctuation, whitespace, and
+    non-Latin script tokens are excluded from projection training.
+    """
+    print("Extracting full vocabulary embeddings …")
+    all_vecs = extractor.full_vocab_embeddings()          # (vocab_size, hidden)
+    all_tokens = extractor.tokenizer.convert_ids_to_tokens(
+        list(range(all_vecs.shape[0]))
+    )
+
+    mask = [bool(_LATIN_OR_DIGIT.search(t or "")) for t in all_tokens]
+    vecs   = all_vecs[[i for i, keep in enumerate(mask) if keep]]
+    tokens = [t for t, keep in zip(all_tokens, mask) if keep]
 
     print(
-        f"  {len(all_tokens)} tokens from {len(phrases)} phrases → "
-        f"{len(filtered_tokens)} kept after Latin/digit filter "
-        f"({len(all_tokens) - len(filtered_tokens)} dropped)"
+        f"  vocab size: {len(all_tokens)} → "
+        f"{len(tokens)} kept after Latin/digit filter "
+        f"({len(all_tokens) - len(tokens)} dropped)"
     )
-    return filtered_vecs, filtered_tokens
-
-
-def _phrase_trajectories_in_2d(
-    extractor: EmbeddingExtractor,
-    projection: LatentProjection,
-    phrases: list[str],
-) -> list[dict]:
-    """Project each phrase's token sequence through PCA+UMAP."""
-    trajectories = []
-    for phrase in tqdm(phrases, desc="Projecting trajectories"):
-        traj = extractor.phrase_trajectory(phrase)
-        coords = projection.transform(traj.embeddings)  # (n_tokens, 2)
-        trajectories.append({
-            "phrase": phrase,
-            "tokens": traj.tokens,
-            "coords": coords,
-        })
-    return trajectories
+    return vecs, tokens
 
 
 # ---------------------------------------------------------------------------
 # Visualisation
 # ---------------------------------------------------------------------------
 
-def _plot_trajectories(
-    trajectories: list[dict],
+def _plot_embedding_space(
+    coords: np.ndarray,
+    tokens: list[str],
     output_path: str,
     dpi: int = 150,
+    point_size: float = 2,
+    alpha: float = 0.6,
 ) -> None:
-    n = len(trajectories)
-    colors = cm.tab20.colors if n <= 20 else cm.turbo(np.linspace(0, 1, n))
+    # azimuthal angle in XY plane: atan2(y, x) → [-π, π] → [0, 1]
+    angles = np.arctan2(coords[:, 1], coords[:, 0])
+    colors = (angles + np.pi) / (2 * np.pi)   # normalise to [0, 1]
 
-    # detect dimensionality from the first trajectory
-    is_3d = trajectories[0]["coords"].shape[1] == 3
+    cmap = plt.cm.hsv
+    fig = plt.figure(figsize=(13, 10))
+    ax = fig.add_subplot(111, projection="3d")
 
-    fig = plt.figure(figsize=(13, 9))
-    ax = fig.add_subplot(111, projection="3d") if is_3d else fig.add_subplot(111)
+    sc = ax.scatter(
+        coords[:, 0], coords[:, 1], coords[:, 2],
+        c=colors, cmap=cmap, s=point_size, alpha=alpha,
+        linewidths=0,
+    )
 
-    for i, traj in enumerate(trajectories):
-        coords = traj["coords"]
-        color = colors[i % len(colors)]
-        phrase_label = traj["phrase"][:40]
+    # colour bar showing angle scale
+    sm = ScalarMappable(cmap=cmap, norm=Normalize(vmin=-180, vmax=180))
+    sm.set_array([])
+    cbar = fig.colorbar(sm, ax=ax, pad=0.1, shrink=0.6)
+    cbar.set_label("Azimuthal angle (°)", fontsize=9)
 
-        if is_3d:
-            ax.plot(coords[:, 0], coords[:, 1], coords[:, 2],
-                    "-o", color=color, linewidth=1.5, markersize=5,
-                    alpha=0.8, label=phrase_label)
-            ax.scatter(*coords[0],  s=80, color=color, marker="^", zorder=5)
-            ax.scatter(*coords[-1], s=80, color=color, marker="s", zorder=5)
-            for j, token in enumerate(traj["tokens"]):
-                ax.text(coords[j, 0], coords[j, 1], coords[j, 2],
-                        token, fontsize=6, alpha=0.7)
-        else:
-            ax.plot(coords[:, 0], coords[:, 1], "-o", color=color,
-                    linewidth=1.5, markersize=5, alpha=0.8, label=phrase_label)
-            ax.scatter(*coords[0],  s=80, color=color, marker="^", zorder=5)
-            ax.scatter(*coords[-1], s=80, color=color, marker="s", zorder=5)
-            for j, token in enumerate(traj["tokens"]):
-                ax.annotate(token, coords[j], fontsize=6, alpha=0.7,
-                            xytext=(3, 3), textcoords="offset points")
+    ax.set_title(f"Token Embedding Space — {len(tokens):,} tokens", fontsize=13)
+    ax.set_xlabel("UMAP 1", fontsize=8)
+    ax.set_ylabel("UMAP 2", fontsize=8)
+    ax.set_zlabel("UMAP 3", fontsize=8)
+    ax.tick_params(labelsize=6)
 
-    ax.set_title("Phrase Trajectories in Latent Space (PCA → UMAP)", fontsize=14)
-    ax.set_xlabel("UMAP dim 1")
-    ax.set_ylabel("UMAP dim 2")
-    if is_3d:
-        ax.set_zlabel("UMAP dim 3")
-    ax.legend(fontsize=7, loc="upper left", bbox_to_anchor=(1, 1))
     fig.tight_layout()
-
     Path(output_path).parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(output_path, dpi=dpi, bbox_inches="tight")
     print(f"Plot saved → {output_path}")
@@ -134,50 +110,41 @@ def main():
     parser = argparse.ArgumentParser(description="Train PCA+UMAP projection")
     parser.add_argument("--config", default="config/config.yaml")
     parser.add_argument("--no-viz", action="store_true",
-                        help="Skip trajectory visualisation")
+                        help="Skip the 3-D scatter plot")
     args = parser.parse_args()
 
     cfg = load_config(args.config)
 
-    # 1 — Load corpus -------------------------------------------------------
-    phrases = load_corpus(
-        cfg["data"]["corpus_path"],
-        max_phrases=cfg["data"].get("max_phrases"),
-    )
-
-    # 2 — Extract embeddings ------------------------------------------------
+    # 1 — Load model and extract filtered vocab embeddings ------------------
     extractor = EmbeddingExtractor(cfg["model"]["name"])
-    corpus_vecs, _ = _build_corpus_embeddings(extractor, phrases)
+    vecs, tokens = _vocab_embeddings(extractor)
 
-    # 3 — Fit PCA + UMAP projection -----------------------------------------
-    proj_cfg = cfg.get("projection", {})
+    # 2 — Fit PCA + UMAP ----------------------------------------------------
     pca_cfg  = cfg.get("pca",  {})
     umap_cfg = cfg.get("umap", {})
 
     projection = LatentProjection(
-        pca_components=pca_cfg.get("n_components", 50),
-        umap_components=umap_cfg.get("n_components", 2),
+        pca_components=pca_cfg.get("n_components", 64),
+        umap_components=umap_cfg.get("n_components", 3),
         umap_neighbors=umap_cfg.get("n_neighbors", 15),
         umap_min_dist=umap_cfg.get("min_dist", 0.1),
         umap_metric=umap_cfg.get("metric", "cosine"),
         umap_random_state=umap_cfg.get("random_state", 42),
     )
-    projection.fit(corpus_vecs)
+    coords = projection.fit_transform(vecs)   # (n_tokens, 3)
 
-    # 4 — Save the fitted projection -----------------------------------------
-    projection.save(proj_cfg.get("output_path", "models/projection.pkl"))
+    # 3 — Save fitted projection --------------------------------------------
+    projection.save(cfg.get("projection", {}).get("output_path", "models/projection.pkl"))
 
-    # 5 — Visualise trajectories ---------------------------------------------
+    # 4 — Visualise ---------------------------------------------------------
     if not args.no_viz:
-        viz_cfg = cfg.get("visualization", {})
-        max_t   = viz_cfg.get("max_trajectories", 20)
-        sample  = phrases[:max_t]
-
-        trajectories = _phrase_trajectories_in_2d(extractor, projection, sample)
-        _plot_trajectories(
-            trajectories,
-            output_path=viz_cfg.get("output_path", "outputs/trajectories.png"),
-            dpi=viz_cfg.get("dpi", 150),
+        viz = cfg.get("visualization", {})
+        _plot_embedding_space(
+            coords, tokens,
+            output_path=viz.get("output_path", "outputs/embedding_space.png"),
+            dpi=viz.get("dpi", 150),
+            point_size=viz.get("point_size", 2),
+            alpha=viz.get("alpha", 0.6),
         )
 
 
