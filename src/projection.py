@@ -26,14 +26,17 @@ class LatentProjection:
         umap_n_jobs: int = 1,
     ):
         self.pca = PCA(n_components=pca_components)
-        self.umap = UMAP(
+        # random_state makes UMAP override n_jobs to 1; omit it when parallelism is requested
+        umap_kwargs: dict = dict(
             n_components=umap_components,
             n_neighbors=umap_neighbors,
             min_dist=umap_min_dist,
             metric=umap_metric,
-            random_state=umap_random_state,
             n_jobs=umap_n_jobs,
         )
+        if umap_n_jobs == 1:
+            umap_kwargs["random_state"] = umap_random_state
+        self.umap = UMAP(**umap_kwargs)
         self._fitted = False
 
     # ------------------------------------------------------------------
