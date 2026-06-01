@@ -9,6 +9,7 @@ Usage:
 """
 
 import argparse
+import re
 import sys
 from pathlib import Path
 
@@ -27,15 +28,29 @@ from src import EmbeddingExtractor, LatentProjection, load_config, load_corpus
 # Helpers
 # ---------------------------------------------------------------------------
 
+_LATIN_OR_DIGIT = re.compile(r"[a-zA-Z0-9]")
+
+
 def _build_corpus_embeddings(
     extractor: EmbeddingExtractor,
     phrases: list[str],
 ) -> tuple[np.ndarray, list[str]]:
-    """Collect all token embeddings and their decoded tokens."""
+    """Collect token embeddings, keeping only tokens that contain at least one
+    Latin letter (a-z / A-Z) or digit.  Pure punctuation, whitespace, and
+    non-Latin script tokens are discarded before projection training."""
     print("Extracting embeddings from corpus …")
     all_vecs, all_tokens = extractor.corpus_embeddings(phrases)
-    print(f"  {len(all_tokens)} tokens from {len(phrases)} phrases")
-    return all_vecs, all_tokens
+
+    mask = [bool(_LATIN_OR_DIGIT.search(t)) for t in all_tokens]
+    filtered_vecs   = all_vecs[[i for i, keep in enumerate(mask) if keep]]
+    filtered_tokens = [t for t, keep in zip(all_tokens, mask) if keep]
+
+    print(
+        f"  {len(all_tokens)} tokens from {len(phrases)} phrases → "
+        f"{len(filtered_tokens)} kept after Latin/digit filter "
+        f"({len(all_tokens) - len(filtered_tokens)} dropped)"
+    )
+    return filtered_vecs, filtered_tokens
 
 
 def _phrase_trajectories_in_2d(
