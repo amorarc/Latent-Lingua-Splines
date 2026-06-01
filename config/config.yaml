@@ -1,12 +1,18 @@
 model:
-  name: "Qwen/Qwen3.5-4B"   
+  name: "Qwen/Qwen3.5-4B"
+  quantization:
+    enabled: false
+    bits: 4                  # 4 or 8
+    compute_dtype: "float16" # float16 | bfloat16 | float32  (4-bit only)
+    quant_type: "nf4"        # nf4 | fp4  (4-bit only)
+    double_quant: true       # nested quantization for extra memory savings (4-bit only)
 
 data:
   corpus_path: "data/corpus.txt"   # one sentence / phrase per line
   max_phrases: null                 # null = use all; integer = subsample
 
 pca:
-  n_components: 50   # intermediate dimensionality before UMAP
+  n_components: 64   # intermediate dimensionality before UMAP
 
 umap:
   n_components: 3    # final dimensionality (2 for 2-D plots, 3 for 3-D)
