@@ -1,0 +1,28 @@
+model:
+  name: "bert-base-uncased"   # any HuggingFace model with an embedding layer
+  # Examples:
+  #   "gpt2"
+  #   "roberta-base"
+  #   "google/flan-t5-small"
+
+data:
+  corpus_path: "data/corpus.txt"   # one sentence / phrase per line
+  max_phrases: null                 # null = use all; integer = subsample
+
+pca:
+  n_components: 50   # intermediate dimensionality before UMAP
+
+umap:
+  n_components: 2    # final dimensionality (2 for 2-D plots, 3 for 3-D)
+  n_neighbors: 15
+  min_dist: 0.1
+  metric: "cosine"
+  random_state: 42
+
+projection:
+  output_path: "models/projection.pkl"
+
+visualization:
+  output_path: "outputs/trajectories.png"
+  dpi: 150
+  max_trajectories: 20   # how many phrase trajectories to draw

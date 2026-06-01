@@ -1,0 +1,9 @@
+transformers
+torch
+scikit-learn>
+umap-learn
+numpy
+pyyaml
+matplotlib
+joblib
+tqdm
