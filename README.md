@@ -58,21 +58,6 @@ pip install -r requirements.txt
    python scripts/train_projection.py --no-viz
    ```
 
-5. **Run a large model with quantization** — edit `config/config.yaml`:
-
-   ```yaml
-   model:
-     name: "Qwen/Qwen3.5-4B"
-     quantization:
-       enabled: true
-       bits: 4              # 4-bit NF4 — cuts VRAM roughly to ¼
-       compute_dtype: "float16"
-       quant_type: "nf4"
-       double_quant: true
-   ```
-
-   > Requires a CUDA GPU. `bitsandbytes` and `accelerate` are included in `requirements.txt`.
-
 ## Configuration reference
 
 All parameters live in `config/config.yaml`:
@@ -80,11 +65,6 @@ All parameters live in `config/config.yaml`:
 | Key | Default | Description |
 |-----|---------|-------------|
 | `model.name` | `bert-base-uncased` | Any HuggingFace model identifier |
-| `model.quantization.enabled` | `false` | Enable bitsandbytes quantization |
-| `model.quantization.bits` | `4` | `4` or `8` |
-| `model.quantization.compute_dtype` | `float16` | Compute dtype for 4-bit (`float16`, `bfloat16`, `float32`) |
-| `model.quantization.quant_type` | `nf4` | 4-bit quant type: `nf4` or `fp4` |
-| `model.quantization.double_quant` | `true` | Nested quantization (4-bit only) |
 | `data.corpus_path` | `data/corpus.txt` | Plain-text corpus, one phrase per line |
 | `data.max_phrases` | `null` | Subsample the corpus (null = use all) |
 | `pca.n_components` | `50` | Intermediate PCA dimensionality |

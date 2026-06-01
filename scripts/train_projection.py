@@ -131,10 +131,7 @@ def main():
     )
 
     # 2 — Extract embeddings ------------------------------------------------
-    extractor = EmbeddingExtractor(
-        cfg["model"]["name"],
-        quantization=cfg["model"].get("quantization"),
-    )
+    extractor = EmbeddingExtractor(cfg["model"]["name"])
     corpus_vecs, _ = _build_corpus_embeddings(extractor, phrases)
 
     # 3 — Fit PCA + UMAP projection -----------------------------------------

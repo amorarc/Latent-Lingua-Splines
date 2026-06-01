@@ -1,11 +1,5 @@
 model:
-  name: "Qwen/Qwen3.5-4B"
-  quantization:
-    enabled: false
-    bits: 4                  # 4 or 8
-    compute_dtype: "float16" # float16 | bfloat16 | float32  (4-bit only)
-    quant_type: "nf4"        # nf4 | fp4  (4-bit only)
-    double_quant: true       # nested quantization for extra memory savings (4-bit only)
+  name: "Qwen/Qwen3.5-0.8B"
 
 data:
   corpus_path: "data/corpus.txt"   # one sentence / phrase per line
