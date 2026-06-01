@@ -65,34 +65,43 @@ def _plot_trajectories(
     output_path: str,
     dpi: int = 150,
 ) -> None:
-    fig, ax = plt.subplots(figsize=(12, 9))
     n = len(trajectories)
     colors = cm.tab20.colors if n <= 20 else cm.turbo(np.linspace(0, 1, n))
 
+    # detect dimensionality from the first trajectory
+    is_3d = trajectories[0]["coords"].shape[1] == 3
+
+    fig = plt.figure(figsize=(13, 9))
+    ax = fig.add_subplot(111, projection="3d") if is_3d else fig.add_subplot(111)
+
     for i, traj in enumerate(trajectories):
-        coords = traj["coords"]           # (n_tokens, 2)
+        coords = traj["coords"]
         color = colors[i % len(colors)]
-        phrase_label = traj["phrase"][:40]  # truncate long phrases
+        phrase_label = traj["phrase"][:40]
 
-        # draw line connecting tokens in order
-        ax.plot(coords[:, 0], coords[:, 1], "-o", color=color,
-                linewidth=1.5, markersize=5, alpha=0.8, label=phrase_label)
-
-        # mark first and last token
-        ax.scatter(*coords[0], s=80, color=color, marker="^", zorder=5)
-        ax.scatter(*coords[-1], s=80, color=color, marker="s", zorder=5)
-
-        # annotate each token
-        for j, token in enumerate(traj["tokens"]):
-            ax.annotate(
-                token, coords[j],
-                fontsize=6, alpha=0.7,
-                xytext=(3, 3), textcoords="offset points",
-            )
+        if is_3d:
+            ax.plot(coords[:, 0], coords[:, 1], coords[:, 2],
+                    "-o", color=color, linewidth=1.5, markersize=5,
+                    alpha=0.8, label=phrase_label)
+            ax.scatter(*coords[0],  s=80, color=color, marker="^", zorder=5)
+            ax.scatter(*coords[-1], s=80, color=color, marker="s", zorder=5)
+            for j, token in enumerate(traj["tokens"]):
+                ax.text(coords[j, 0], coords[j, 1], coords[j, 2],
+                        token, fontsize=6, alpha=0.7)
+        else:
+            ax.plot(coords[:, 0], coords[:, 1], "-o", color=color,
+                    linewidth=1.5, markersize=5, alpha=0.8, label=phrase_label)
+            ax.scatter(*coords[0],  s=80, color=color, marker="^", zorder=5)
+            ax.scatter(*coords[-1], s=80, color=color, marker="s", zorder=5)
+            for j, token in enumerate(traj["tokens"]):
+                ax.annotate(token, coords[j], fontsize=6, alpha=0.7,
+                            xytext=(3, 3), textcoords="offset points")
 
     ax.set_title("Phrase Trajectories in Latent Space (PCA → UMAP)", fontsize=14)
     ax.set_xlabel("UMAP dim 1")
     ax.set_ylabel("UMAP dim 2")
+    if is_3d:
+        ax.set_zlabel("UMAP dim 3")
     ax.legend(fontsize=7, loc="upper left", bbox_to_anchor=(1, 1))
     fig.tight_layout()
 

@@ -1,9 +1,5 @@
 model:
-  name: "bert-base-uncased"   # any HuggingFace model with an embedding layer
-  # Examples:
-  #   "gpt2"
-  #   "roberta-base"
-  #   "google/flan-t5-small"
+  name: "Qwen/Qwen3.5-4B"   
 
 data:
   corpus_path: "data/corpus.txt"   # one sentence / phrase per line
@@ -13,7 +9,7 @@ pca:
   n_components: 50   # intermediate dimensionality before UMAP
 
 umap:
-  n_components: 2    # final dimensionality (2 for 2-D plots, 3 for 3-D)
+  n_components: 3    # final dimensionality (2 for 2-D plots, 3 for 3-D)
   n_neighbors: 15
   min_dist: 0.1
   metric: "cosine"

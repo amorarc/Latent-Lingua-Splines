@@ -68,7 +68,7 @@ All parameters live in `config/config.yaml`:
 | `data.corpus_path` | `data/corpus.txt` | Plain-text corpus, one phrase per line |
 | `data.max_phrases` | `null` | Subsample the corpus (null = use all) |
 | `pca.n_components` | `50` | Intermediate PCA dimensionality |
-| `umap.n_components` | `2` | Final dimensionality (2 or 3) |
+| `umap.n_components` | `3` | Final dimensionality (2 or 3) |
 | `umap.n_neighbors` | `15` | UMAP neighbourhood size |
 | `umap.min_dist` | `0.1` | UMAP minimum distance |
 | `umap.metric` | `cosine` | Distance metric |
