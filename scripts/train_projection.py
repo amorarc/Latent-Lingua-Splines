@@ -33,11 +33,13 @@ _LATIN_OR_DIGIT = re.compile(r"[a-zA-Z0-9]")
 
 def _vocab_embeddings(
     extractor: EmbeddingExtractor,
+    n_samples: int | None = None,
+    seed: int = 42,
 ) -> tuple[np.ndarray, list[str]]:
     """
-    Return embeddings and token strings for every vocab entry that contains
-    at least one Latin letter or digit.  Pure punctuation, whitespace, and
-    non-Latin script tokens are excluded from projection training.
+    Return embeddings and token strings for vocab entries that contain at least
+    one Latin letter or digit.  If *n_samples* is set, a random subset of that
+    size is drawn from the filtered pool and used to fit the projection.
     """
     print("Extracting full vocabulary embeddings …")
     all_vecs = extractor.full_vocab_embeddings()          # (vocab_size, hidden)
@@ -54,6 +56,15 @@ def _vocab_embeddings(
         f"{len(tokens)} kept after Latin/digit filter "
         f"({len(all_tokens) - len(tokens)} dropped)"
     )
+
+    if n_samples is not None and n_samples != -1 and n_samples < len(tokens):
+        rng = np.random.default_rng(seed)
+        idx = rng.choice(len(tokens), size=n_samples, replace=False)
+        idx.sort()
+        vecs   = vecs[idx]
+        tokens = [tokens[i] for i in idx]
+        print(f"  sampled {n_samples:,} tokens for projection fitting")
+
     return vecs, tokens
 
 
@@ -117,7 +128,10 @@ def main():
 
     # 1 — Load model and extract filtered vocab embeddings ------------------
     extractor = EmbeddingExtractor(cfg["model"]["name"])
-    vecs, tokens = _vocab_embeddings(extractor)
+    vecs, tokens = _vocab_embeddings(
+        extractor,
+        n_samples=cfg.get("projection_samples"),
+    )
 
     # 2 — Fit PCA + UMAP ----------------------------------------------------
     pca_cfg  = cfg.get("pca",  {})
