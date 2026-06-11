@@ -17,6 +17,7 @@ models/*.pkl
 models/*.pt
 outputs/*.png
 outputs/*.svg
+outputs/*.npz
 
 # Jupyter
 .ipynb_checkpoints/

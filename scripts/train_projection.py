@@ -85,7 +85,7 @@ def _plot_embedding_space(
     colors = (angles + np.pi) / (2 * np.pi)   # normalise to [0, 1]
 
     cmap = plt.cm.hsv
-    fig = plt.figure(figsize=(13, 10))
+    fig = plt.figure(figsize=(26, 20))
     ax = fig.add_subplot(111, projection="3d")
 
     sc = ax.scatter(

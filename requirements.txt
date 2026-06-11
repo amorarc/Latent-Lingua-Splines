@@ -3,6 +3,7 @@ torch
 scikit-learn
 umap-learn
 numpy
+scipy
 pyyaml
 matplotlib
 joblib
