@@ -161,7 +161,7 @@ All parameters live in `config/config.yaml`:
 | `umap.n_neighbors` | `15` | UMAP neighbourhood size |
 | `umap.min_dist` | `0.1` | UMAP minimum distance |
 | `umap.metric` | `cosine` | Distance metric |
-| `umap.n_jobs` | `12` | Parallel threads for UMAP fitting (−1 = all cores) |
+| `umap.n_jobs` | `-1` | Parallel threads for UMAP fitting (−1 = all cores) |
 | `umap.random_state` | `42` | RNG seed for reproducibility — ignored when `n_jobs ≠ 1` (UMAP requires single-threaded mode for a fixed seed) |
 | `projection.output_path` | `models/projection.pkl` | Where to save the fitted projection |
 | `visualization.output_path` | `outputs/embedding_space.png` | Static plot output path |

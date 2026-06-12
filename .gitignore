@@ -11,6 +11,7 @@ build/
 
 # Data & models (can be large)
 data/*.txt
+!data/good_prompts.txt
 data/*.csv
 data/*.json
 models/*.pkl
